@@ -2,7 +2,7 @@
 fun main() {
     val missingStrings = Utils.findMissingStrings(
         Utils.getMainFile(),
-        Utils.getFile(LanguageCode.HINDI)
+        Utils.getFile(LanguageCode.SPANISH)
     )
 
     println("Missing strings: ${missingStrings.size}")

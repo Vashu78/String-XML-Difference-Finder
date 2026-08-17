@@ -45,4 +45,32 @@ object Utils {
             key !in spanishStrings
         }
     }
+
+    fun findDuplicateKeys(file: File): List<String> {
+        val document = DocumentBuilderFactory
+            .newInstance()
+            .newDocumentBuilder()
+            .parse(file)
+
+        val keys = mutableListOf<String>()
+
+        val nodes = document.getElementsByTagName("string")
+
+        for (i in 0 until nodes.length) {
+            val key = nodes.item(i)
+                .attributes
+                .getNamedItem("name")
+                .nodeValue
+
+            keys.add(key)
+        }
+
+        return keys
+            .groupingBy { it }
+            .eachCount()
+            .filter { it.value > 1 }
+            .map { (key, count) ->
+                "$key ($count times)"
+            }
+    }
 }
