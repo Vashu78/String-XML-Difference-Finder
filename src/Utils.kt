@@ -30,20 +30,20 @@ object Utils {
             }
     }
 
-    fun getMainFile() =
-        File("D:\\repo\\tf-executive-android-version_2.77_notification\\app\\src\\main\\res\\values\\strings.xml")
-
-    fun getFile(language: LanguageCode): File {
-        return File("D:\\repo\\tf-executive-android-version_2.77_notification\\app\\src\\main\\res\\values-${language.code}\\strings.xml")
-    }
+    /**
+     * @param path should be like
+     * "D:\repo\DiffFinder\app\src\main\res\values\strings.xml"
+     */
+    fun getFile(path: String) =
+        File(path)
 
     fun findMissingStrings(
-        englishFile: File,
-        spanishFile: File
+        mainFile: File,
+        otherFile: File
     ): Map<String, String> {
 
-        val englishStrings = getStringResources(englishFile)
-        val spanishStrings = getStringResources(spanishFile)
+        val englishStrings = getStringResources(mainFile)
+        val spanishStrings = getStringResources(otherFile)
 
         return englishStrings.filterKeys { key ->
             key !in spanishStrings

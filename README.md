@@ -1,72 +1,335 @@
 # Android `strings.xml` Difference Finder
 
-A simple Kotlin utility to compare the main Android `strings.xml` file with a language-specific `strings.xml` file and find the **missing strings**.
-
-You provide:
-
-1. The **main `strings.xml` file**
-2. The **language code** (for example, Spanish)
-
-The tool compares both files and prints the strings that are present in the main file but missing from the selected language file.
+A simple Kotlin utility for comparing Android `strings.xml` files,
+finding missing string resources, detecting duplicate keys, and
+generating a cleaned `strings.xml` file.
 
 ## ✨ Features
 
-* Compare the main `strings.xml` with any supported language
-* Find missing string resources
-* Detect duplicate string keys in a `strings.xml` file
-* Remove duplicate keys while keeping the first occurrence
-* Generate a new cleaned `strings.xml` file without duplicates
-* Pass a language code instead of manually providing the language file path
-* Print missing strings in Android XML format
-* Useful for checking translation/localization completeness
-## 🚀 How It Works
+-   Compare a main `strings.xml` with another language `strings.xml`
+-   Find string keys that exist in the main file but are missing from
+    the other file
+-   Return missing strings together with their values
+-   Detect duplicate `string` resource keys in the same XML file
+-   Show how many times each duplicate key occurs
+-   Remove duplicate keys while keeping the first occurrence
+-   Generate a new cleaned XML file without modifying the original file
+-   Work directly with `java.io.File`
 
-The main `strings.xml` contains all the application's strings.
+## 📁 Project Structure
+
+A typical Android project can have:
+
+``` text
+app/
+└── src/
+    └── main/
+        └── res/
+            ├── values/
+            │   └── strings.xml
+            └── values-es/
+                └── strings.xml
+```
+
+The utility does not require the files to be located in a specific
+Android resource directory. You can provide any valid file path.
+
+## 🛠️ Utils
+
+The main functionality is contained in the `Utils` object.
+
+### Read String Resources
+
+``` kotlin
+fun getStringResources(file: File): Map<String, String>
+```
+
+Reads all `<string>` resources from the supplied XML file and returns
+them as a map:
+
+``` text
+string key → string value
+```
 
 For example:
 
-### Main `strings.xml`
+``` xml
+<string name="login">Login</string>
+<string name="logout">Logout</string>
+```
 
-```xml
+becomes:
+
+``` text
+login  → Login
+logout → Logout
+```
+
+### Get a File
+
+``` kotlin
+fun getFile(path: String) = File(path)
+```
+
+Creates a `File` object from the supplied path.
+
+Example:
+
+``` kotlin
+val file = Utils.getFile(
+    """D:\repo\DiffFinder\app\src\main\res\values\strings.xml"""
+)
+```
+
+> On Windows, using a raw Kotlin string (`"""..."""`) is convenient when
+> the path contains backslashes.
+
+## 🔍 Find Missing Strings
+
+Use:
+
+``` kotlin
+fun findMissingStrings(
+    mainFile: File,
+    otherFile: File
+): Map<String, String>
+```
+
+This compares the keys in the main `strings.xml` with the keys in
+another language file.
+
+Only keys that exist in the main file and do not exist in the other file
+are returned.
+
+### Example
+
+#### Main `strings.xml`
+
+``` xml
 <resources>
     <string name="app_name">My App</string>
     <string name="welcome">Welcome</string>
     <string name="login">Login</string>
+    <string name="logout">Logout</string>
 </resources>
 ```
 
-The Spanish `strings.xml` contains:
+#### Spanish `strings.xml`
 
-```xml
+``` xml
 <resources>
-    <string name="app_name">My App</string>
+    <string name="app_name">Mi aplicación</string>
+    <string name="welcome">Bienvenido</string>
 </resources>
 ```
 
-When you run the tool with the Spanish language code, it compares the two files.
+### Usage
+
+``` kotlin
+val mainFile = Utils.getFile(
+    """D:\repo\DiffFinder\app\src\main\res\values\strings.xml"""
+)
+
+val spanishFile = Utils.getFile(
+    """D:\repo\DiffFinder\app\src\main\res\values-es\strings.xml"""
+)
+
+val missingStrings = Utils.findMissingStrings(
+    mainFile,
+    spanishFile
+)
+
+missingStrings.forEach { (key, value) ->
+    println("""<string name="$key">$value</string>""")
+}
+```
 
 ### Output
 
-The tool identifies the strings that are available in the main `strings.xml` but missing from the Spanish file:
-
-```xml
-<string name="welcome">Welcome</string>
+``` xml
 <string name="login">Login</string>
+<string name="logout">Logout</string>
 ```
 
-So the output tells you exactly which strings need to be added to the Spanish translation file.
+The returned `Map<String, String>` contains both the missing key and its
+value from the main file.
 
-## 🛠️ Usage
+## 🔁 Change the Language File
 
-The language file is selected using `LanguageCode`.
+The utility does not contain language-specific logic. You simply provide
+a different XML file.
 
-For example, to compare the main file with Spanish:
+For example:
 
-```kotlin
+``` kotlin
+val hindiFile = Utils.getFile(
+    """D:\repo\DiffFinder\app\src\main\res\values-hi\strings.xml"""
+)
+
+val missingStrings = Utils.findMissingStrings(
+    mainFile,
+    hindiFile
+)
+```
+
+The same method can be used for Spanish, Hindi, French, or any other
+language file.
+
+## 🔎 Find Duplicate Keys
+
+Use:
+
+``` kotlin
+fun findDuplicateKeys(file: File): List<String>
+```
+
+This scans all `<string>` elements in a single `strings.xml` file and
+finds keys that appear more than once.
+
+### Example
+
+``` xml
+<resources>
+    <string name="app_name">My App</string>
+    <string name="login">Login</string>
+    <string name="logout">Logout</string>
+    <string name="login">Sign In</string>
+    <string name="logout">Sign Out</string>
+</resources>
+```
+
+### Usage
+
+``` kotlin
+val file = Utils.getFile(
+    """D:\repo\DiffFinder\app\src\main\res\values\strings.xml"""
+)
+
+val duplicateKeys = Utils.findDuplicateKeys(file)
+
+duplicateKeys.forEach {
+    println(it)
+}
+```
+
+### Output
+
+``` text
+login (2 times)
+logout (2 times)
+```
+
+The returned list contains the key and the number of times it appears.
+
+## 🧹 Remove Duplicate Keys
+
+Use:
+
+``` kotlin
+fun removeDuplicateKeys(
+    inputFile: File,
+    outputFile: File
+)
+```
+
+This removes duplicate `<string>` resources from the input XML and
+creates a new XML file.
+
+### Important Behavior
+
+The utility:
+
+1.  Reads the input XML.
+2.  Checks every `string` key.
+3.  Keeps the first occurrence of each key.
+4.  Removes subsequent occurrences.
+5.  Writes the cleaned XML to the output file.
+6.  Does not modify the original input file.
+
+### Example
+
+Input:
+
+``` xml
+<resources>
+    <string name="app_name">My App</string>
+    <string name="login">Login</string>
+    <string name="logout">Logout</string>
+    <string name="login">Sign In</string>
+    <string name="settings">Settings</string>
+    <string name="logout">Sign Out</string>
+</resources>
+```
+
+Usage:
+
+``` kotlin
+val inputFile = Utils.getFile(
+    """D:\repo\DiffFinder\app\src\main\res\values\strings.xml"""
+)
+
+val outputFile = Utils.getFile(
+    """D:\repo\DiffFinder\app\src\main\res\values\strings_cleaned.xml"""
+)
+
+Utils.removeDuplicateKeys(
+    inputFile = inputFile,
+    outputFile = outputFile
+)
+```
+
+The generated file contains:
+
+``` xml
+<resources>
+    <string name="app_name">My App</string>
+    <string name="login">Login</string>
+    <string name="logout">Logout</string>
+    <string name="settings">Settings</string>
+</resources>
+```
+
+The first `login` and first `logout` entries are retained.
+
+## 🔄 Recommended Workflow
+
+You can use the utility as a simple `strings.xml` validation workflow:
+
+``` text
+Main strings.xml
+       │
+       ├───────────────────────────┐
+       │                           │
+       ▼                           ▼
+Compare with language       Check duplicate keys
+       │                           │
+       ▼                           ▼
+Find missing strings        Find duplicate keys
+       │                           │
+       ▼                           ▼
+Print missing key/value     Remove duplicate keys
+                                   │
+                                   ▼
+                         Create cleaned XML file
+```
+
+## 📋 Complete Example
+
+``` kotlin
 fun main() {
+
+    val mainFile = Utils.getFile(
+        """D:\repo\DiffFinder\app\src\main\res\values\strings.xml"""
+    )
+
+    val spanishFile = Utils.getFile(
+        """D:\repo\DiffFinder\app\src\main\res\values-es\strings.xml"""
+    )
+
+    // Find strings missing from Spanish
     val missingStrings = Utils.findMissingStrings(
-        Utils.getMainFile(),
-        Utils.getFile(LanguageCode.SPANISH)
+        mainFile,
+        spanishFile
     )
 
     println("Missing strings: ${missingStrings.size}")
@@ -74,195 +337,39 @@ fun main() {
     missingStrings.forEach { (key, value) ->
         println("""<string name="$key">$value</string>""")
     }
+
+    // Find duplicate keys
+    val duplicateKeys = Utils.findDuplicateKeys(mainFile)
+
+    println("\nDuplicate keys: ${duplicateKeys.size}")
+
+    duplicateKeys.forEach {
+        println(it)
+    }
+
+    // Create a cleaned XML file
+    val cleanedFile = Utils.getFile(
+        """D:\repo\DiffFinder\app\src\main\res\values\strings_cleaned.xml"""
+    )
+
+    Utils.removeDuplicateKeys(
+        inputFile = mainFile,
+        outputFile = cleanedFile
+    )
 }
 ```
 
-### Change the Language
+## ⚠️ Notes
 
-You only need to change the language code:
-
-```kotlin
-LanguageCode.SPANISH
-```
-
-For example:
-
-```kotlin
-LanguageCode.HINDI
-```
-
-or another language supported by the project.
-
-The corresponding language file path is handled internally by:
-
-```kotlin
-Utils.getFile(LanguageCode)
-```
-
-## 📊 Example
-
-### Input 1 — Main `strings.xml`
-
-```xml
-<resources>
-    <string name="app_name">My App</string>
-    <string name="welcome">Welcome</string>
-    <string name="login">Login</string>
-</resources>
-```
-
-### Input 2 — Spanish `strings.xml`
-
-```xml
-<resources>
-    <string name="app_name">My App</string>
-</resources>
-```
-
-### Result
-
-```text
-Missing strings: 2
-```
-
-```xml
-<string name="welcome">Welcome</string>
-<string name="login">Login</string>
-```
-
-These strings are missing from the Spanish `strings.xml` and can be added to complete the translation file.
-
-## 📁 File Selection
-
-The main file is obtained using:
-
-```kotlin
-Utils.getMainFile()
-```
-
-The language-specific file is obtained using:
-
-```kotlin
-Utils.getFile(LanguageCode.SPANISH)
-```
-
-Therefore, you don't need to manually pass the path of the Spanish `strings.xml` every time.
-
-## 🔄 Comparison Flow
-
-```text
-Main strings.xml
-       │
-       │
-       ▼
-Utils.getMainFile()
-       │
-       │
-       ├──────────────┐
-       │              │
-       ▼              ▼
-   Compare      Spanish strings.xml
-       │              ▲
-       │              │
-       │      Utils.getFile(
-       │        LanguageCode.SPANISH
-       │      )
-       │
-       ▼
-Find missing strings
-       │
-       ▼
-Print missing XML entries
-```
-
-## 🎯 Use Case
-
-This tool is especially useful for Android applications that support multiple languages.
-
-Whenever new strings are added to the main `strings.xml`, you can run this utility for each supported language to quickly find which strings have not yet been translated or added.
-
-For example:
-
-```text
-Main strings.xml
-       ↓
-Spanish
-       ↓
-Find missing strings
-
-Main strings.xml
-       ↓
-Hindi
-       ↓
-Find missing strings
-
-Main strings.xml
-       ↓
-French
-       ↓
-Find missing strings
-```
-
-## 🧹 Duplicate Key Detection and Cleanup
-
-The utility can also find duplicate `name` keys in the same Android `strings.xml` file.
-
-For example:
-
-```xml
-<resources>
-    <string name="app_name">My App</string>
-    <string name="login">Login</string>
-    <string name="logout">Logout</string>
-    <string name="login">Sign In</string>
-</resources>
-```
-
-In this example, `login` is defined twice.
-
-### Find Duplicate Keys
-
-The utility identifies duplicate keys and reports how many times each key appears:
-
-```text
-Duplicate keys:
-login (2 times)
-```
-
-### Remove Duplicate Keys
-
-Duplicate keys can be removed and a new cleaned file can be generated. The first occurrence is kept and subsequent occurrences are removed.
-
-```kotlin
-val inputFile = File("src/main/res/values/strings.xml")
-val outputFile = File("src/main/res/values/strings_cleaned.xml")
-
-removeDuplicateKeys(
-    inputFile = inputFile,
-    outputFile = outputFile
-)
-```
-
-The original file is not modified. A separate cleaned `strings.xml` file is created.
-
-## 🔄 Complete Workflow
-
-The utility can be used for both translation validation and duplicate-key cleanup:
-
-```text
-Main strings.xml
-       │
-       ├──────────────────────────┐
-       │                          │
-       ▼                          ▼
-Compare with language       Find duplicate keys
-       │                          │
-       ▼                          ▼
-Find missing strings       Remove duplicate keys
-       │                          │
-       ▼                          ▼
-Print missing XML          Create cleaned strings.xml
-```
+-   The utility currently processes `<string>` resources.
+-   `findMissingStrings()` compares resource keys, not translated
+    values.
+-   `findDuplicateKeys()` reports duplicate `name` attributes.
+-   `removeDuplicateKeys()` keeps the first occurrence of a duplicate
+    key.
+-   The original input file is not modified when removing duplicates.
+-   XML parsing is performed using `DocumentBuilderFactory`.
+-   The cleaned XML is written using `TransformerFactory`.
 
 ## 🤝 Contributing
 
@@ -274,6 +381,7 @@ Feel free to open an issue or submit a pull request.
 
 Add your project's license information here.
 
----
+------------------------------------------------------------------------
 
-⭐ If this project helps you manage Android translations, consider giving the repository a star!
+⭐ If this project helps you manage Android translations and
+`strings.xml` cleanup, consider giving the repository a star!
