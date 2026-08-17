@@ -1,5 +1,9 @@
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.transform.OutputKeys
+import javax.xml.transform.TransformerFactory
+import javax.xml.transform.dom.DOMSource
+import javax.xml.transform.stream.StreamResult
 
 
 object Utils {
@@ -56,7 +60,7 @@ object Utils {
 
         val nodes = document.getElementsByTagName("string")
 
-        for (i in 0 until nodes.length) {
+        for (i in 0..<nodes.length) {
             val key = nodes.item(i)
                 .attributes
                 .getNamedItem("name")
@@ -72,5 +76,63 @@ object Utils {
             .map { (key, count) ->
                 "$key ($count times)"
             }
+    }
+
+    fun removeDuplicateKeys(
+        inputFile: File,
+        outputFile: File
+    ) {
+        val factory = DocumentBuilderFactory.newInstance()
+        val document = factory
+            .newDocumentBuilder()
+            .parse(inputFile)
+
+        val resources = document.documentElement
+        val nodes = document.getElementsByTagName("string")
+
+        val seenKeys = mutableSetOf<String>()
+
+        // Store nodes that need to be removed
+        val duplicateNodes = mutableListOf<org.w3c.dom.Node>()
+
+        for (i in 0 until nodes.length) {
+            val node = nodes.item(i)
+
+            val key = node.attributes
+                .getNamedItem("name")
+                .nodeValue
+
+            if (!seenKeys.add(key)) {
+                duplicateNodes.add(node)
+            }
+        }
+
+        // Remove duplicate nodes
+        duplicateNodes.forEach { node ->
+            resources.removeChild(node)
+        }
+
+        // Create new XML file
+        val transformer = TransformerFactory
+            .newInstance()
+            .newTransformer()
+
+        transformer.setOutputProperty(
+            OutputKeys.INDENT,
+            "yes"
+        )
+
+        transformer.setOutputProperty(
+            OutputKeys.ENCODING,
+            "UTF-8"
+        )
+
+        transformer.transform(
+            DOMSource(document),
+            StreamResult(outputFile)
+        )
+
+        println("Cleaned file created:")
+        println(outputFile.absolutePath)
     }
 }

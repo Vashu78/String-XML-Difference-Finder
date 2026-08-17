@@ -13,10 +13,12 @@ The tool compares both files and prints the strings that are present in the main
 
 * Compare the main `strings.xml` with any supported language
 * Find missing string resources
+* Detect duplicate string keys in a `strings.xml` file
+* Remove duplicate keys while keeping the first occurrence
+* Generate a new cleaned `strings.xml` file without duplicates
 * Pass a language code instead of manually providing the language file path
 * Print missing strings in Android XML format
 * Useful for checking translation/localization completeness
-
 ## 🚀 How It Works
 
 The main `strings.xml` contains all the application's strings.
@@ -199,6 +201,67 @@ Main strings.xml
 French
        ↓
 Find missing strings
+```
+
+## 🧹 Duplicate Key Detection and Cleanup
+
+The utility can also find duplicate `name` keys in the same Android `strings.xml` file.
+
+For example:
+
+```xml
+<resources>
+    <string name="app_name">My App</string>
+    <string name="login">Login</string>
+    <string name="logout">Logout</string>
+    <string name="login">Sign In</string>
+</resources>
+```
+
+In this example, `login` is defined twice.
+
+### Find Duplicate Keys
+
+The utility identifies duplicate keys and reports how many times each key appears:
+
+```text
+Duplicate keys:
+login (2 times)
+```
+
+### Remove Duplicate Keys
+
+Duplicate keys can be removed and a new cleaned file can be generated. The first occurrence is kept and subsequent occurrences are removed.
+
+```kotlin
+val inputFile = File("src/main/res/values/strings.xml")
+val outputFile = File("src/main/res/values/strings_cleaned.xml")
+
+removeDuplicateKeys(
+    inputFile = inputFile,
+    outputFile = outputFile
+)
+```
+
+The original file is not modified. A separate cleaned `strings.xml` file is created.
+
+## 🔄 Complete Workflow
+
+The utility can be used for both translation validation and duplicate-key cleanup:
+
+```text
+Main strings.xml
+       │
+       ├──────────────────────────┐
+       │                          │
+       ▼                          ▼
+Compare with language       Find duplicate keys
+       │                          │
+       ▼                          ▼
+Find missing strings       Remove duplicate keys
+       │                          │
+       ▼                          ▼
+Print missing XML          Create cleaned strings.xml
 ```
 
 ## 🤝 Contributing
