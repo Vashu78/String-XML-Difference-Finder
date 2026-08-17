@@ -1,24 +1,29 @@
-# String XML Difference Finder
+# Android `strings.xml` Difference Finder
 
-A simple tool to compare Android `strings.xml` files and identify differences between them.
+A simple Kotlin utility to compare the main Android `strings.xml` file with a language-specific `strings.xml` file and find the **missing strings**.
 
-This project helps Android developers quickly find **missing, added, modified, or unchanged string resources** when comparing two `strings.xml` files.
+You provide:
+
+1. The **main `strings.xml` file**
+2. The **language code** (for example, Spanish)
+
+The tool compares both files and prints the strings that are present in the main file but missing from the selected language file.
 
 ## ✨ Features
 
-* 🔍 Compare two `strings.xml` files
-* ➕ Find newly added strings
-* ➖ Find missing strings
-* ✏️ Detect modified string values
-* ✅ Identify matching strings
-* 📋 Generate an easy-to-read difference report
-* 🚀 Useful for checking translations and keeping Android string resources synchronized
+* Compare the main `strings.xml` with any supported language
+* Find missing string resources
+* Pass a language code instead of manually providing the language file path
+* Print missing strings in Android XML format
+* Useful for checking translation/localization completeness
 
-## 📂 Example
+## 🚀 How It Works
 
-Suppose you have two files:
+The main `strings.xml` contains all the application's strings.
 
-**File 1 – `strings.xml`**
+For example:
+
+### Main `strings.xml`
 
 ```xml
 <resources>
@@ -28,129 +33,184 @@ Suppose you have two files:
 </resources>
 ```
 
-**File 2 – `strings.xml`**
+The Spanish `strings.xml` contains:
 
 ```xml
 <resources>
     <string name="app_name">My App</string>
-    <string name="welcome">Hello</string>
-    <string name="logout">Logout</string>
 </resources>
 ```
 
-The tool can identify:
+When you run the tool with the Spanish language code, it compares the two files.
 
-```text
-Modified:
-  welcome
-  File 1: Welcome
-  File 2: Hello
+### Output
 
-Missing:
-  login
+The tool identifies the strings that are available in the main `strings.xml` but missing from the Spanish file:
 
-Added:
-  logout
-
-Unchanged:
-  app_name
+```xml
+<string name="welcome">Welcome</string>
+<string name="login">Login</string>
 ```
 
-## 🛠️ Use Cases
+So the output tells you exactly which strings need to be added to the Spanish translation file.
 
-This tool can be useful when:
+## 🛠️ Usage
 
-* Comparing `strings.xml` between two Android projects
-* Checking translation files
-* Finding missing localization keys
-* Verifying changes between app versions
-* Migrating or merging Android projects
-* Reviewing string-resource changes before a release
+The language file is selected using `LanguageCode`.
 
-## 🚀 Getting Started
+For example, to compare the main file with Spanish:
 
-### Clone the repository
+```kotlin
+fun main() {
+    val missingStrings = Utils.findMissingStrings(
+        Utils.getMainFile(),
+        Utils.getFile(LanguageCode.SPANISH)
+    )
 
-```bash
-git clone https://github.com/<your-username>/<your-repository>.git
-cd <your-repository>
+    println("Missing strings: ${missingStrings.size}")
+
+    missingStrings.forEach { (key, value) ->
+        println("""<string name="$key">$value</string>""")
+    }
+}
 ```
 
-### Run the project
+### Change the Language
 
-Add the command required by your implementation here.
+You only need to change the language code:
+
+```kotlin
+LanguageCode.SPANISH
+```
 
 For example:
 
-```bash
-python main.py file1.xml file2.xml
+```kotlin
+LanguageCode.HINDI
 ```
 
-> Replace the command above with the actual command used by your project.
+or another language supported by the project.
 
-## 📊 Difference Types
+The corresponding language file path is handled internally by:
 
-| Difference    | Description                                                |
-| ------------- | ---------------------------------------------------------- |
-| **Added**     | String exists in the second file but not the first         |
-| **Missing**   | String exists in the first file but not the second         |
-| **Modified**  | String key exists in both files but the value is different |
-| **Unchanged** | String key and value are identical in both files           |
+```kotlin
+Utils.getFile(LanguageCode)
+```
 
-## 📁 Project Structure
+## 📊 Example
+
+### Input 1 — Main `strings.xml`
+
+```xml
+<resources>
+    <string name="app_name">My App</string>
+    <string name="welcome">Welcome</string>
+    <string name="login">Login</string>
+</resources>
+```
+
+### Input 2 — Spanish `strings.xml`
+
+```xml
+<resources>
+    <string name="app_name">My App</string>
+</resources>
+```
+
+### Result
 
 ```text
-.
-├── README.md
-├── ...
-└── ...
+Missing strings: 2
 ```
 
-Update this section according to your project's actual structure.
+```xml
+<string name="welcome">Welcome</string>
+<string name="login">Login</string>
+```
+
+These strings are missing from the Spanish `strings.xml` and can be added to complete the translation file.
+
+## 📁 File Selection
+
+The main file is obtained using:
+
+```kotlin
+Utils.getMainFile()
+```
+
+The language-specific file is obtained using:
+
+```kotlin
+Utils.getFile(LanguageCode.SPANISH)
+```
+
+Therefore, you don't need to manually pass the path of the Spanish `strings.xml` every time.
+
+## 🔄 Comparison Flow
+
+```text
+Main strings.xml
+       │
+       │
+       ▼
+Utils.getMainFile()
+       │
+       │
+       ├──────────────┐
+       │              │
+       ▼              ▼
+   Compare      Spanish strings.xml
+       │              ▲
+       │              │
+       │      Utils.getFile(
+       │        LanguageCode.SPANISH
+       │      )
+       │
+       ▼
+Find missing strings
+       │
+       ▼
+Print missing XML entries
+```
+
+## 🎯 Use Case
+
+This tool is especially useful for Android applications that support multiple languages.
+
+Whenever new strings are added to the main `strings.xml`, you can run this utility for each supported language to quickly find which strings have not yet been translated or added.
+
+For example:
+
+```text
+Main strings.xml
+       ↓
+Spanish
+       ↓
+Find missing strings
+
+Main strings.xml
+       ↓
+Hindi
+       ↓
+Find missing strings
+
+Main strings.xml
+       ↓
+French
+       ↓
+Find missing strings
+```
 
 ## 🤝 Contributing
 
-Contributions are welcome!
+Contributions and improvements are welcome.
 
-1. Fork the repository
-2. Create a new branch
-
-```bash
-git checkout -b feature/my-feature
-```
-
-3. Make your changes
-4. Commit your changes
-
-```bash
-git commit -m "Add my feature"
-```
-
-5. Push the branch
-
-```bash
-git push origin feature/my-feature
-```
-
-6. Open a Pull Request
-
-## 🐛 Issues
-
-If you find a bug or have a feature request, please open an issue in the GitHub repository.
-
-When reporting a bug, include:
-
-* Input files or a minimal reproducible example
-* Expected result
-* Actual result
-* Steps to reproduce
+Feel free to open an issue or submit a pull request.
 
 ## 📄 License
 
-This project is licensed under the **MIT License**.
-
-See the `LICENSE` file for more information.
+Add your project's license information here.
 
 ---
 
-⭐ If this project is useful to you, consider giving the repository a star!
+⭐ If this project helps you manage Android translations, consider giving the repository a star!
